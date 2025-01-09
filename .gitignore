@@ -15,3 +15,6 @@ other_tests
 
 # tests
 # stests/test-multi.cpp
+.cache/*
+
+*.log

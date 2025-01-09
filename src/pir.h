@@ -1,17 +1,17 @@
 #ifndef PIR_H
 #define PIR_H
 
-#include "params.h"
-#include "secret.h"
-#include "encrypt.h"
-#include "samples.h"
 #include "answer.h"
-#include "query.h"
-#include "recover.h"
+#include "encrypt.h"
 #include "lwe.h"
 #include "ntt.h"
-#include "utils.h"
+#include "params.h"
+#include "query.h"
+#include "recover.h"
+#include "samples.h"
+#include "secret.h"
 #include "twosteps.h"
+#include "utils.h"
 // #include "stateless.h"
 
 #include "crt.h"
