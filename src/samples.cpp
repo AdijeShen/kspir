@@ -6,6 +6,7 @@
 #include "params.h"
 #include "samples.h"
 
+namespace kspir {
 void sample_random(uint64_t *a, uint64_t modulus, int32_t size) {
 
   for (size_t i = 0; i < size; i++) {
@@ -72,22 +73,9 @@ void sample_database(std::vector<std::vector<uint64_t>> &data) {
   }
 }
 
-uint64_t sample_random62() {
-  uint64_t temp = rand();
-  return (temp << 31) | rand();
-}
-
-void sample_random62_vector(uint64_t *a, size_t length) {
-  for (size_t i = 0; i < length; i++) {
-    uint64_t temp = rand();
-    a[i] = (temp << 31) | rand();
-  }
-}
-
-uint64_t sample_random8() { return rand() & 0x0ff; }
-
 void sample_random8_vector(uint64_t *a, size_t length) {
   for (size_t i = 0; i < length; i++) {
     a[i] = rand() & 0x0ff;
   }
 }
+} // namespace kspir

@@ -7,6 +7,8 @@
 
 #include "crt.h"
 #include "pir.h"
+#include "spdlog/fmt/bundled/format.h"
+#include "timer.h"
 
 // 32 MB
 void test_two_steps() {
@@ -91,326 +93,32 @@ void test_two_steps() {
   showLargeVector(decryptd_message, "result = ");
 }
 
-// 32 MB
-void test_two_steps_bsgs() {
-  Secret queryKey(bigMod);
-
-  uint64_t row = rand() & (N - 1);
-  uint64_t col = 123;
-
-  // sample database
-  std::vector<std::vector<uint64_t>> data(N, std::vector<uint64_t>(N / 2, 0));
-  sample_database_bsgs(data);
-
-  for (size_t i = 0; i < N; i++)
-    data[i][col] = i + 1;
-  std::cout << "the wanted message is " << data[row][col] << std::endl;
-
-  int32_t N1 = 64; // 64;
-  int32_t N2 = N / 2 / N1;
-
-  std::vector<std::vector<uint64_t>> data_ntt(N / 2,
-                                              std::vector<uint64_t>(N, 0));
-  database_tobsgsntt(data_ntt, data, bigMod, N1);
-
-  // auto start_qu = std::chrono::high_resolution_clock::now();
-  RlweCiphertext query1(N, bigMod);
-  query_bsgs(query1, queryKey, col);
-
-  uint64_t length = queryKey.getLength();
-  // uint64_t moudlus = answerKey.getModulus();
-
-  AutoKeyBSGS autoKey;
-  std::vector<int32_t> indexLists;
-  for (size_t i = 1; i < N1; i++) {
-    indexLists.push_back(pow_mod(5, i, 2 * N));
-  }
-  autoKey.keyGen(queryKey, indexLists, BabyStep);
-
-  indexLists.clear();
-  for (size_t i = 1; i < N2; i++) {
-    indexLists.push_back(pow_mod(5, N1 * i, 2 * N));
-  }
-  autoKey.keyGen(queryKey, indexLists, GaintStep);
-
-  // the results
-  RlweCiphertext result;
-  std::vector<uint64_t> decryptd_message(length);
-
-  int ntimes = 1;
-
-  auto start = std::chrono::high_resolution_clock::now();
-
-  for (size_t i = 0; i < ntimes; i++) {
-    matrix_vector_mul_bsgs(result, query1, data_ntt, autoKey, N1);
-  }
-  auto stop = std::chrono::high_resolution_clock::now();
-
-  auto glapsed =
-      std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-  std::cout << ntimes << " matrix vector multiplication bsgs costs "
-            << glapsed.count() << " us." << std::endl;
-
-  // decrypt message
-  decrypt_bsgs(decryptd_message, result, queryKey);
-
-  std::cout << std::endl;
-
-  std::cout << "the recovered value is " << decryptd_message[row] << std::endl;
-  showLargeVector(decryptd_message, "result = ");
-}
-
-// same as above, but using the crtmod
-void test_two_steps_bsgs_crtmod() {
-  Secret queryKey(crtMod);
-
-  uint64_t row = rand() & (N - 1);
-  uint64_t col = 123;
-
-  // sample database
-  std::vector<std::vector<uint64_t>> data(N, std::vector<uint64_t>(N / 2, 0));
-  sample_database_bsgs(data);
-
-  for (size_t i = 0; i < N; i++)
-    data[i][col] = i + 1;
-  std::cout << "the wanted message is " << data[row][col] << std::endl;
-
-  int32_t N1 = 64; // 64;
-  int32_t N2 = N / 2 / N1;
-
-  std::vector<std::vector<uint64_t>> data_ntt(N / 2,
-                                              std::vector<uint64_t>(N, 0));
-  database_tobsgsntt(data_ntt, data, crtMod, N1);
-
-  // auto start_qu = std::chrono::high_resolution_clock::now();
-  RlweCiphertext query1(N, crtMod);
-  query_bsgs(query1, queryKey, col);
-
-  uint64_t length = queryKey.getLength();
-  // uint64_t moudlus = answerKey.getModulus();
-
-  AutoKeyBSGS autoKey(N, crtMod);
-  std::vector<int32_t> indexLists;
-  for (size_t i = 1; i < N1; i++) {
-    indexLists.push_back(pow_mod(5, i, 2 * N));
-  }
-  autoKey.keyGen(queryKey, indexLists, BabyStep);
-
-  indexLists.clear();
-  for (size_t i = 1; i < N2; i++) {
-    indexLists.push_back(pow_mod(5, N1 * i, 2 * N));
-  }
-  autoKey.keyGen(queryKey, indexLists, GaintStep);
-
-  // the results
-  RlweCiphertext result(N, crtMod);
-  std::vector<uint64_t> decryptd_message(length);
-
-  int ntimes = 1;
-
-  auto start = std::chrono::high_resolution_clock::now();
-
-  for (size_t i = 0; i < ntimes; i++) {
-    matrix_vector_mul_bsgs(result, query1, data_ntt, autoKey, N1);
-  }
-  auto stop = std::chrono::high_resolution_clock::now();
-
-  auto glapsed =
-      std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-  std::cout << ntimes << " matrix vector multiplication bsgs costs "
-            << glapsed.count() << " us." << std::endl;
-
-  // decrypt message
-  decrypt_bsgs(decryptd_message, result, queryKey);
-
-  std::cout << std::endl;
-
-  std::cout << "the recovered value is " << decryptd_message[row] << std::endl;
-  showLargeVector(decryptd_message, "result = ");
-}
-
-// 32 MB
-void test_two_steps_bsgs_crt() {
-  Secret queryKey(crtMod);
-
-  uint64_t row = rand() & (N - 1);
-  uint64_t col = 123;
-
-  // sample database
-  std::vector<std::vector<uint64_t>> data(N, std::vector<uint64_t>(N / 2, 0));
-  sample_database_bsgs(data);
-
-  for (size_t i = 0; i < N; i++)
-    data[i][col] = i + 1;
-  std::cout << "the wanted message is " << data[row][col] << std::endl;
-
-  int32_t N1 = 32; // 64; // 128; // 64;
-  int32_t N2 = N / 2 / N1;
-  std::cout << "N1: " << N1 << ", N2: " << N2 << std::endl;
-
-  std::vector<std::vector<uint64_t>> data_ntt(N / 2,
-                                              std::vector<uint64_t>(N, 0));
-  database_tobsgsntt(data_ntt, data, crtMod, N1);
-
-  size_t num_words = N * N / 2;
-  uint64_t *datacrt =
-      (uint64_t *)aligned_alloc(64, sizeof(uint64_t) * num_words);
-  database_tocrt(datacrt, data_ntt, N1);
-
-  // auto start_qu = std::chrono::high_resolution_clock::now();
-  RlweCiphertext query1(N, crtMod);
-  query_bsgs(query1, queryKey, col);
-
-  uint64_t length = queryKey.getLength();
-  // uint64_t moudlus = answerKey.getModulus();
-
-  AutoKeyBSGS autoKey(N, crtMod);
-  std::vector<int32_t> indexLists;
-  for (size_t i = 1; i < N1; i++) {
-    indexLists.push_back(pow_mod(5, i, 2 * N));
-  }
-  autoKey.keyGen(queryKey, indexLists, BabyStep);
-
-  indexLists.clear();
-  for (size_t i = 1; i < N2; i++) {
-    indexLists.push_back(pow_mod(5, N1 * i, 2 * N));
-  }
-  autoKey.keyGen(queryKey, indexLists, GaintStep);
-
-  // the results
-  RlweCiphertext result(N, crtMod);
-  std::vector<uint64_t> decryptd_message(length);
-
-  int ntimes = 1;
-
-  auto start = std::chrono::high_resolution_clock::now();
-
-  for (size_t i = 0; i < ntimes; i++) {
-    matrix_vector_mul_bsgs_crt(result, query1, datacrt, autoKey, N1);
-  }
-  auto stop = std::chrono::high_resolution_clock::now();
-
-  auto glapsed =
-      std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-  std::cout << ntimes << " matrix vector multiplication bsgs costs "
-            << glapsed.count() << " us." << std::endl;
-
-  // decrypt message
-  decrypt_bsgs(decryptd_message, result, queryKey);
-
-  std::cout << std::endl;
-
-  std::cout << "the recovered value is " << decryptd_message[row] << std::endl;
-  showLargeVector(decryptd_message, "result = ");
-}
-
-void test_two_steps_bsgs_rns() {
-  Secret queryKey(crtMod, false); // stored in coefficient form
-
-  uint64_t row = rand() & (N - 1);
-  uint64_t col = 123;
-
-  // sample database
-  std::vector<std::vector<uint64_t>> data(N, std::vector<uint64_t>(N / 2, 0));
-  sample_database_bsgs(data);
-
-  for (size_t i = 0; i < N; i++)
-    data[i][col] = i + 1;
-  std::cout << "the wanted message is " << data[row][col] << std::endl;
-
-  int32_t N1 = 128; // 128; // 64;
-  int32_t N2 = N / 2 / N1;
-  std::cout << "N1: " << N1 << ", N2: " << N2 << std::endl;
-
-  auto start_prep = std::chrono::high_resolution_clock::now();
-
-  std::vector<std::vector<uint64_t>> data_ntt(N / 2,
-                                              std::vector<uint64_t>(N, 0));
-  database_tobsgsntt(data_ntt, data, crtMod, N1);
-
-  size_t num_words = N * N / 2;
-  uint64_t *datacrt =
-      (uint64_t *)aligned_alloc(64, sizeof(uint64_t) * num_words);
-  database_tocrt(datacrt, data_ntt, N1);
-
-  auto stop_prep = std::chrono::high_resolution_clock::now();
-  auto glapsed_prep = std::chrono::duration_cast<std::chrono::milliseconds>(
-      stop_prep - start_prep);
-  std::cout << " server preprocessing costs " << glapsed_prep.count() << " ms."
-            << std::endl;
-
-  // auto start_qu = std::chrono::high_resolution_clock::now();
-  std::vector<RlweCiphertext> query1(1, RlweCiphertext(N, crtMod));
-  query1.push_back(RlweCiphertext(N, bsMod));
-  query_bsgs_rns(query1, queryKey, col);
-
-  uint64_t length = queryKey.getLength();
-  // uint64_t moudlus = answerKey.getModulus();
-
-  AutoKeyBSGSRNS autoKey(N, crtMod, bsMod);
-  // AutoKeyBSGSRNS autoKey(N, crtMod, bsMod, 7, 0x01 << 10, 0x01 << 10);
-  std::vector<int32_t> indexLists;
-  for (size_t i = 1; i <= N1 / 2; i++) {
-    indexLists.push_back(pow_mod(5, i, 2 * N));
-  }
-  autoKey.keyGen(queryKey, indexLists, BabyStep);
-
-  indexLists.clear();
-  for (size_t i = 1; i < N2; i++) {
-    indexLists.push_back(pow_mod(5, N1 * i, 2 * N));
-  }
-  autoKey.keyGen(queryKey, indexLists, GaintStep);
-
-  // compute permutation matrix
-  std::vector<std::vector<int32_t>> permutations(
-      N1 + 1, std::vector<int32_t>(length, 0));
-  compute_permutation_matrix(permutations, N1 + 1, length);
-
-  // the results
-  RlweCiphertext result(N, crtMod);
-  std::vector<uint64_t> decryptd_message(length);
-
-  int ntimes = 1;
-
-  auto start = std::chrono::high_resolution_clock::now();
-
-  for (size_t i = 0; i < ntimes; i++) {
-    matrix_vector_mul_bsgs_rns_crt(result, query1, datacrt, autoKey, N1,
-                                   permutations);
-  }
-  auto stop = std::chrono::high_resolution_clock::now();
-
-  auto glapsed =
-      std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-  std::cout << ntimes << " matrix vector multiplication bsgs costs "
-            << glapsed.count() << " us." << std::endl;
-
-  // decrypt message
-  decrypt_bsgs(decryptd_message, result, queryKey);
-
-  std::cout << std::endl;
-
-  std::cout << "the recovered value is " << decryptd_message[row] << std::endl;
-  showLargeVector(decryptd_message, "result = ");
-}
-
 void test_two_steps_bsgs_rns_large() {
   // r = 16     : 256 MB
   // r = 64     :   1 GB
   // r = 64 * 8 :   8 GB
 
-  int32_t r = 64 * 8; // 256 MB
+  SPDLOG_INFO("=================== BSGS-RNS-LARGE 测试 ===================");
 
+  // 创建定时器
+  Timer timer;
+  timer.setTimePoint("开始");
+
+  int32_t r = 16; // 256 MB
+
+  // 初始化密钥
   Secret queryKey(crtMod, false); // stored in coefficient form
+  timer.setTimePoint("密钥初始化");
 
   uint64_t row = rand() & (N - 1);
   uint64_t col = 123;
 
-  // sample database
+  // 设置参数
   int32_t N1 = 128; // 128; // 64;
   int32_t N2 = N / 2 / N1;
-  std::cout << "r: " << r << ", N1: " << N1 << ", N2: " << N2 << std::endl;
+  SPDLOG_INFO("参数设置: r={}, N1={}, N2={}", r, N1, N2);
 
+  // 内存分配
   size_t num_words = N * N / 2;
   uint64_t *datacrt =
       (uint64_t *)aligned_alloc(64, sizeof(uint64_t) * num_words * r);
@@ -418,42 +126,49 @@ void test_two_steps_bsgs_rns_large() {
   std::vector<std::vector<uint64_t>> data(N, std::vector<uint64_t>(N / 2, 0));
   std::vector<std::vector<uint64_t>> data_ntt(N / 2,
                                               std::vector<uint64_t>(N, 0));
+  timer.setTimePoint("内存分配");
 
-  std::chrono::milliseconds glapsed_prep = std::chrono::milliseconds(0);
-
+  // 数据库预处理
   for (size_t k = 0; k < r; k++) {
-    // std::vector<std::vector<uint64_t> > data_temp(data.begin(), data.begin()
-    // + N);
+    // 随机生成数据库
     sample_database_bsgs(data);
-
     for (size_t i = 0; i < N; i++)
       data[i][col] = i + 1;
-    // std::cout << "the wanted message is " << data[row][col] << std::endl;
-    auto start_prep = std::chrono::high_resolution_clock::now();
+
+    if (k == 0) {
+      timer.setTimePoint("数据库采样");
+    }
+
+    // 转换为BSGS-NTT形式
     database_tobsgsntt(data_ntt, data, crtMod, N1);
+
+    if (k == 0) {
+      timer.setTimePoint("NTT转换");
+    }
+
+    // 转换为CRT形式
     database_tocrt(datacrt + num_words * k, data_ntt, N1);
-    auto stop_prep = std::chrono::high_resolution_clock::now();
-    glapsed_prep += std::chrono::duration_cast<std::chrono::milliseconds>(
-        stop_prep - start_prep);
+
+    if (k == 0) {
+      timer.setTimePoint("CRT转换");
+    }
+
+    if (k == 0 || k == r - 1) {
+      SPDLOG_INFO("数据库 #{} 预处理完成", k);
+    }
   }
+  timer.setTimePoint("数据库预处理完成");
 
-  std::cout << " server preprocessing costs " << glapsed_prep.count() << " ms."
-            << std::endl;
-
+  // 生成查询密文
   std::vector<RlweCiphertext> query1(1, RlweCiphertext(N, crtMod));
   query1.push_back(RlweCiphertext(N, bsMod));
-  auto start_qu = std::chrono::high_resolution_clock::now();
   query_bsgs_rns(query1, queryKey, col);
-  auto stop_qu = std::chrono::high_resolution_clock::now();
+  timer.setTimePoint("查询生成");
 
-  auto glapsed_qu =
-      std::chrono::duration_cast<std::chrono::microseconds>(stop_qu - start_qu);
-  std::cout << " query costs " << glapsed_qu.count() << " us." << std::endl;
-
+  // 生成自同态密钥
   uint64_t length = queryKey.getLength();
-  // uint64_t moudlus = answerKey.getModulus();
-
   AutoKeyBSGSRNS autoKey(N, crtMod, bsMod);
+
   std::vector<int32_t> indexLists;
   for (size_t i = 1; i <= N1 / 2; i++) {
     indexLists.push_back(pow_mod(5, i, 2 * N));
@@ -465,56 +180,75 @@ void test_two_steps_bsgs_rns_large() {
     indexLists.push_back(pow_mod(5, N1 * i, 2 * N));
   }
   autoKey.keyGen(queryKey, indexLists, GaintStep);
+  timer.setTimePoint("自同态密钥生成");
 
-  // compute permutation matrix
+  // 计算置换矩阵
   std::vector<std::vector<int32_t>> permutations(
       N1, std::vector<int32_t>(length, 0));
   compute_permutation_matrix(permutations, N1, length);
+  timer.setTimePoint("置换矩阵计算");
 
-  // the results
-  // RlweCiphertext result(N, crtMod);
+  // 矩阵-向量乘法
   std::vector<RlweCiphertext> result(r, RlweCiphertext(N, crtMod));
-
   std::vector<uint64_t> decryptd_message(length);
-
   int ntimes = 1;
-
-  auto start = std::chrono::high_resolution_clock::now();
 
   for (size_t i = 0; i < ntimes; i++) {
     matrix_vector_mul_bsgs_rns_crt_large(result, query1, datacrt, autoKey, N1,
                                          permutations, r);
   }
-  auto stop = std::chrono::high_resolution_clock::now();
+  timer.setTimePoint("矩阵-向量乘法");
 
-  auto glapsed =
-      std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-  std::cout << ntimes << " matrix vector multiplication bsgs costs "
-            << glapsed.count() << " us." << std::endl;
-
-  // decrypt message
-  auto start_de = std::chrono::high_resolution_clock::now();
+  // 解密结果
   decrypt_bsgs(decryptd_message, result[0], queryKey);
-  auto stop_de = std::chrono::high_resolution_clock::now();
+  timer.setTimePoint("解密");
 
-  auto glapsed_de =
-      std::chrono::duration_cast<std::chrono::microseconds>(stop_de - start_de);
-  std::cout << " decrypt costs " << glapsed_de.count() << " us." << std::endl;
+  // 验证结果
+  SPDLOG_INFO("查询结果: 第 {} 行的值是 {}", row, decryptd_message[row]);
+  timer.setTimePoint("结果验证");
 
-  std::cout << std::endl;
+  SPDLOG_INFO("解密结果是 {}", fmt::join(decryptd_message.begin(),
+                                         decryptd_message.begin() + 20, ","));
 
-  std::cout << "the recovered value is " << decryptd_message[row] << std::endl;
-  showLargeVector(decryptd_message, "result = ");
+  // 输出性能报告
+  SPDLOG_INFO("");
+  SPDLOG_INFO("=================== 性能统计 ===================");
+  SPDLOG_INFO("\n{}", timer);
+
+  // 对于特定阶段，计算其占总时间的百分比
+  double totalTime = timer.getTotalTime();
+
+  auto keyInit = timer.getTimePoint("密钥初始化");
+  auto dbPrep = timer.getTimePoint("数据库预处理完成");
+  auto queryGen = timer.getTimePoint("查询生成");
+  auto keyGen = timer.getTimePoint("自同态密钥生成");
+  auto matMul = timer.getTimePoint("矩阵-向量乘法");
+  auto decrypt = timer.getTimePoint("解密");
+
+  SPDLOG_INFO("关键阶段时间占比:");
+  SPDLOG_INFO("  - 数据库预处理: {:.2f}%", (dbPrep.second / totalTime) * 100.0);
+  SPDLOG_INFO("  - 查询生成:     {:.2f}%",
+              (queryGen.second / totalTime) * 100.0);
+  SPDLOG_INFO("  - 矩阵-向量乘:  {:.2f}%", (matMul.second / totalTime) * 100.0);
+  SPDLOG_INFO("  - 解密:         {:.2f}%",
+              (decrypt.second / totalTime) * 100.0);
+
+  // 每秒可处理的数据量
+  double throughput =
+      (r * N * N / 2.0 * 8) / (totalTime / 1000.0) / (1024 * 1024); // MB/s
+  SPDLOG_INFO("处理速度: {:.2f} MB/s", throughput);
+
+  SPDLOG_INFO(
+      "=================== BSGS-RNS-LARGE 测试完成 ===================");
+
+  // 释放内存
+  free(datacrt);
 }
 
 int main(int argc, char **argv) {
   // srand(time(NULL));
 
   // test_two_steps();
-  // test_two_steps_bsgs();
-  // test_two_steps_bsgs_crtmod(); // basic test but for crtMod
-  // test_two_steps_bsgs_crt();
-  // test_two_steps_bsgs_rns();
   test_two_steps_bsgs_rns_large(); // packing r basic database
 
   return 0;

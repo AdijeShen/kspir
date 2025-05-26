@@ -2,6 +2,7 @@
 
 #include "ntt.h"
 #include "secret.h"
+#include <spdlog/spdlog.h>
 
 #include "crt.h"
 
@@ -9,6 +10,7 @@
 #include <hexl/hexl.hpp>
 #endif
 
+namespace kspir {
 // default construct: set Hanmming weight as 2/3*n
 Secret::Secret(uint64_t module, bool ntt) : modulus(module), nttform(ntt) {
   this->length = N;
@@ -114,3 +116,4 @@ void Secret::toNttForm() {
 }
 
 Secret::~Secret() {}
+} // namespace kspir

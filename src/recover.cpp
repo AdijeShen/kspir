@@ -3,6 +3,7 @@
 #include "encrypt.h"
 #include "recover.h"
 
+namespace kspir {
 void recover(std::vector<uint64_t> &message, RlweCiphertext &cipher,
              Secret &new_secret) {
   decrypt(message, cipher, new_secret);
@@ -24,3 +25,4 @@ void recover(std::vector<uint64_t> &message, RlweCiphertext &cipher,
     *iter = temp;
   }
 }
+} // namespace kspir

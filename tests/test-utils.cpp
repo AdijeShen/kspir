@@ -10,7 +10,7 @@
 
 #include "pir.h"
 #include "utils.h"
-
+#include <spdlog/spdlog.h>
 void test_decompose() {
   uint64_t modulus = crtMod;
 
@@ -190,7 +190,6 @@ void test_automorphic_transform_rns() {
 
   auto start = std::chrono::high_resolution_clock::now();
   evalAutoRNS(cipher[0], cipher[1], 3, autokey);
-  // evalTrNnRNS(cipher, 5, autokey);
   auto stop = std::chrono::high_resolution_clock::now();
 
   auto glapsed =
@@ -335,119 +334,6 @@ void test_dummy_ksKeyGen() {
   ntts.ComputeForward(ks[1].data(), ks[1].data(), 1, 1);
   decrypt(decryptd_message.data(), ks[0].data(), ks[1].data(), answerKey);
   showLargeVector(decryptd_message, "The decrypted value is ");
-#endif
-}
-
-void test_intel_hexl() {
-  int32_t length = N;
-  // uint64_t modulus = bigMod;
-  uint64_t modulus = crtMod;
-
-  uint64_t root_of_unity1 = intel::hexl::MinimalPrimitiveRoot(2 * N, crtq1);
-  uint64_t root_of_unity2 = intel::hexl::MinimalPrimitiveRoot(2 * N, crtq2);
-  uint64_t root_of_unity = crt_compose(root_of_unity1, root_of_unity2);
-  std::cout << "root_of_unity = " << root_of_unity << std::endl;
-  /***********************     test permutation      *************************/
-
-  int32_t rotate_num = 2;
-
-  std::vector<uint64_t> input(length, 0);
-  std::vector<uint64_t> input_ntt(length, 0);
-  std::vector<uint64_t> automorphiced(length, 0);
-  std::vector<uint64_t> automorphiced_ntt(length, 0);
-
-#ifdef INTEL_HEXL
-  // intel::hexl::NTT ntts(length, modulus);
-  intel::hexl::NTT ntts(length, modulus, root_of_unity_crt);
-  sample_random8_vector(input.data(), length);
-
-  // input_ntt
-  ntts.ComputeForward(input_ntt.data(), input.data(), 1, 1);
-
-  automorphic(automorphiced, input, pow_mod(5, rotate_num, 2 * length),
-              modulus); // rotate 2
-  ntts.ComputeForward(automorphiced_ntt.data(), automorphiced.data(), 1, 1);
-
-  // automorphic elments has same ntt numbers
-
-  /***********
-      std::vector<uint64_t> input2(length, 0);
-      std::vector<uint64_t> input2_ntt(length, 0);
-      input2[1] = 1;
-      ntts.ComputeForward(input2_ntt.data(), input2.data(), 1, 1);
-
-      std::cout << "RootOfUnity: " << ntts.GetRootOfUnityPower(0) << std::endl;
-      std::cout << "MiniRootOfUnity: " << ntts.GetMinimalRootOfUnity() <<
-  std::endl;
-      // for (size_t i = 0; i < length; i++)
-      for (size_t i = length - 20; i < length; i ++)
-      {
-          for (size_t j = 1; j < 2 * N; j += 2)
-          {
-              if (pow_mod(ntts.GetMinimalRootOfUnity(), j, modulus) ==
-  input2_ntt[i])
-              {
-                  std::cout << j << ", " << std::endl;
-                  break;
-              }
-          }
-      }
-  *************/
-  std::vector<int32_t> permutation(length, 0);
-  compute_permutation(permutation, rotate_num, length);
-
-  std::vector<uint64_t> result1(length, 0);
-  for (size_t i = 0; i < length; i++) {
-    result1[i] = input_ntt[permutation[i]];
-  }
-
-  showLargeVector(automorphiced_ntt, "result  = ");
-  showLargeVector(result1, "result1 = ");
-  std::cout << " permutation finished." << std::endl;
-
-  /***********************  test permutation matrix  *************************/
-  int32_t max_index = 64;
-
-  auto start = std::chrono::high_resolution_clock::now();
-  std::vector<std::vector<int32_t>> permutations(
-      max_index, std::vector<int32_t>(length, 0));
-  compute_permutation_matrix(permutations, max_index, length);
-  auto stop = std::chrono::high_resolution_clock::now();
-
-  auto glapsed =
-      std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-  std::cout << "generating permutation matrix costs " << glapsed.count()
-            << " us." << std::endl;
-
-  std::vector<uint64_t> result2(length, 0);
-  for (size_t i = 0; i < length; i++) {
-    result2[i] = input_ntt[permutations[rotate_num][i]];
-  }
-
-  showLargeVector(result2, "result2 = ");
-  std::cout << " permutation matrix finished." << std::endl;
-
-  /***********************  test encode  *************************/
-  /**
-  std::vector<uint64_t> input_single(length, 0);
-  std::vector<uint64_t> automorphiced_single(length, 0);
-  std::vector<uint64_t> result3(length, 0);
-
-  int32_t encode_index = 3; // rand() & (N / 2 - 1);
-  input_single[encode_index] = 111111;
-  input_single[N - 1 - encode_index] = 111111;
-
-  ntts.ComputeInverse(input_single.data(), input_single.data(), 1, 1);
-  for (size_t i = 1; i < N / 2; i++)
-  {
-      automorphic(automorphiced_single, input_single, pow_mod(5, i, 2 * length),
-  modulus); // rotate 2 ntts.ComputeForward(automorphiced_single.data(),
-  automorphiced_single.data(), 1, 1); intel::hexl::EltwiseAddMod(result3.data(),
-  result3.data(), automorphiced_single.data(), length, modulus);
-  }
-
-  std::cout << " test encode finished." << std::endl;
-  **/
 #endif
 }
 
@@ -919,8 +805,32 @@ void test_forwarddb() {
   showLargeVector(message, "Decrypted message:");
 }
 
+void test_query_encode() {
+  int n = 8;
+  std::vector<int32_t> query_encode(n, 0);
+  compute_query_encode(query_encode, n);
+
+  SPDLOG_INFO("query_encode: {}", fmt::join(query_encode, ", "));
+
+  // 计算log2(n)位数
+  int log2n = static_cast<int>(std::log2(n));
+  
+  // 打印每个数的二进制表示
+  SPDLOG_INFO("Binary representation ({}位):", log2n);
+  for(int i = 0; i < n; i++) {
+    std::string binary;
+    int val = query_encode[i];
+    for(int j = log2n-1; j >= 0; j--) {
+      binary += ((val >> j) & 1) ? '1' : '0';
+    }
+    SPDLOG_INFO("[{}] = {}", i, binary);
+  }
+}
+
 int main(int argc, char **argv) {
   // srand(time(NULL));
+
+  test_query_encode();
 
   // test_decompose();
   // test_decompose_bsgs();
@@ -930,7 +840,7 @@ int main(int argc, char **argv) {
   // test_automorphic_transform();
   // test_automorphic_transform_rns();
 
-  test_external_product();
+  // test_external_product();
 
   // test_dummy_ksKeyGen();
   // test_recover();

@@ -19,6 +19,7 @@
 #include "constants.h"
 #include "crt.h"
 
+namespace kspir {
 constexpr size_t pol_bytes = 2 * poly_len * sizeof(uint64_t);
 
 constexpr __uint128_t b_inv_pa_i = 163640210UL * crtq2;
@@ -929,3 +930,4 @@ void database_tocrt(uint64_t *datacrt,
     }
   }
 }
+} // namespace kspir

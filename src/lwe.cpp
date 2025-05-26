@@ -17,6 +17,7 @@
  * LweCiphertext class
  */
 
+namespace kspir {
 LweCiphertext::LweCiphertext(/* args */) {}
 
 LweCiphertext::LweCiphertext(int32_t len, uint64_t module)
@@ -1010,3 +1011,4 @@ void AutoKeyBSGSRNS::setBsModules(uint64_t modules) {
 void AutoKeyBSGSRNS::setBSNTT(intel::hexl::NTT &ntts) { this->bsNtts = ntts; }
 
 #endif
+} // namespace kspir

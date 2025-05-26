@@ -49,7 +49,6 @@ void test_first_dimension() {
   for (size_t i = 0; i < 1; i++) {
     ksKey_hint_first_construction(result.b, result.a, query1.a, pk, data);
   }
-  // ksKey_hint_variant(result.b, result.a, query1.a, ks);
   auto stop_ksk = std::chrono::high_resolution_clock::now();
 
   auto start_ans = std::chrono::high_resolution_clock::now();

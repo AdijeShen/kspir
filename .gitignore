@@ -18,3 +18,5 @@ other_tests
 .cache/*
 
 *.log
+
+repomix*

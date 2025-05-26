@@ -19,16 +19,18 @@
 #define FBSGS
 // #define TIME_COLLECT
 
+namespace kspir {
 // note database should be its signed variant
 void sample_database_bsgs(std::vector<std::vector<uint64_t>> &data) {
   // the database has N * N entries, and each entry has 16 bits
   for (size_t i = 0; i < N; i++) {
     for (size_t j = 0; j < N / 2; j++) {
-    sample_rej:
-      uint64_t r = rand() & 0x0ffff;
-      if (r > bsgsp) {
-        goto sample_rej;
-      }
+      uint64_t r;
+      // 使用do-while循环替代goto
+      do {
+        r = rand() & 0x0ffff;
+      } while (r > bsgsp);
+
       data[i][j] = r;
     }
   }
@@ -153,7 +155,7 @@ void database_tobsgsntt(std::vector<std::vector<uint64_t>> &result,
   }
 
   // precompute and store in ntt form
-#ifdef USE_CRTMOD
+#ifdef KSPIR_USE_CRTMOD
   intel::hexl::NTT ntts(N, crtMod, root_of_unity_crt);
 #else
   intel::hexl::NTT ntts(N, bigMod);
@@ -175,7 +177,7 @@ void inverse_encode(std::vector<uint64_t> &message) {
 
   std::vector<uint64_t> temp(length, 0);
   copy(message.begin(), message.end(), temp.begin());
-  for (size_t j = 0; j < N; j++) {
+  for (size_t j = 0; j < length; j++) {
     message[query_decode[j]] = temp[j];
   }
 }
@@ -429,15 +431,9 @@ void evalAuto(RlweCiphertext &result, RlweCiphertext &input,
 
   // (temp_a, temp_b) = automorphic^()(a, b)
   for (size_t i = 0; i < length; i++) {
-#if N == 2048
-    uint64_t destination = (i * index) & 0x0fff; // mod 2N
-#elif N == 256
-    uint64_t destination = (i * index) & 0x01ff; // mod 2N
-#elif N == 4096
-    uint64_t destination = (i * index) & 0x1fff; // mod 2N
-#else
-    uint64_t destination = (i * index) % (2 * length);
-#endif
+    constexpr uint64_t mask =
+        (CURRENT_PARAM_SET == ParamSet::SET_2048) ? 0x0fff : 0x1fff;
+    uint64_t destination = (i * index) & mask; // mod 2N
     if (destination >= length) {
       temp_a[destination - length] = modulus - input.a[i];
       temp_b[destination - length] = modulus - input.b[i];
@@ -512,15 +508,9 @@ void evalAutoCRT(RlweCiphertext &result,
 
     // (temp_a, temp_b) = automorphic^()(a, b)
     for (size_t i = 0; i < length; i++) {
-#if N == 2048
-      uint64_t destination = (i * index) & 0x0fff; // mod 2N
-#elif N == 256
-      uint64_t destination = (i * index) & 0x01ff; // mod 2N
-#elif N == 4096
-      uint64_t destination = (i * index) & 0x1fff; // mod 2N
-#else
-      uint64_t destination = (i * index) % (2 * length);
-#endif
+      constexpr uint64_t mask =
+          (CURRENT_PARAM_SET == ParamSet::SET_2048) ? 0x0fff : 0x1fff;
+      uint64_t destination = (i * index) & mask; // mod 2N
       if (destination >= length) {
         temp_a[destination - length] = modulus - input[cipher_num][i];
         temp_b[destination - length] = modulus - input[cipher_num][i + length];
@@ -598,15 +588,9 @@ void evalAutoRNSCRT(RlweCiphertext &result,
 
     // (temp_a, temp_b) = automorphic^()(a, b)
     for (size_t i = 0; i < length; i++) {
-#if N == 2048
-      uint64_t destination = (i * index) & 0x0fff; // mod 2N
-#elif N == 256
-      uint64_t destination = (i * index) & 0x01ff; // mod 2N
-#elif N == 4096
-      uint64_t destination = (i * index) & 0x1fff; // mod 2N
-#else
-      uint64_t destination = (i * index) % (2 * length);
-#endif
+      constexpr uint64_t mask =
+          (CURRENT_PARAM_SET == ParamSet::SET_2048) ? 0x0fff : 0x1fff;
+      uint64_t destination = (i * index) & mask; // mod 2N
       if (destination >= length) {
         temp_a[destination - length] = modulus - input[cipher_num][i];
         temp_b[destination - length] = modulus - input[cipher_num][i + length];
@@ -736,16 +720,9 @@ inline void automorphic_rns(std::vector<uint64_t> &result,
   // std::copy(data.begin(), data.end(), temp.begin());
 
   for (size_t i = 0; i < N; i++) {
-#if N == 2048
-    uint64_t destination = (i * index) & 0x0fff; // mod 2N
-#elif N == 256
-    uint64_t destination = (i * index) & 0x01ff; // mod 2N
-#elif N == 4096
-    uint64_t destination = (i * index) & 0x1fff; // mod 2N
-#else
-    uint64_t destination =
-        (i * index) & (2 * length - 1); // we suppose length is a power of 2
-#endif
+    constexpr uint64_t mask =
+        (CURRENT_PARAM_SET == ParamSet::SET_2048) ? 0x0fff : 0x1fff;
+    uint64_t destination = (i * index) & mask; // mod 2N
     if (destination >= N) {
       // result[destination - N] = ( modulus - input[i]) % modulus;
       uint64_t temp = modulus - input[i];
@@ -1657,15 +1634,9 @@ void evalAutoRNSKey(RlweCiphertext &result1, RlweCiphertext &result2,
 
   // (temp_a, temp_b) = automorphic^()(a, b)
   for (size_t i = 0; i < length; i++) {
-#if N == 2048
-    uint64_t destination = (i * index) & 0x0fff; // mod 2N
-#elif N == 256
-    uint64_t destination = (i * index) & 0x01ff; // mod 2N
-#elif N == 4096
-    uint64_t destination = (i * index) & 0x1fff; // mod 2N
-#else
-    uint64_t destination = (i * index) % (2 * length);
-#endif
+    constexpr uint64_t mask =
+        (CURRENT_PARAM_SET == ParamSet::SET_2048) ? 0x0fff : 0x1fff;
+    uint64_t destination = (i * index) & mask; // mod 2N
     if (destination >= length) {
       temp_a1[destination - length] = modulus1 - input1.a[i];
       temp_b1[destination - length] = modulus1 - input1.b[i];
@@ -1903,3 +1874,4 @@ void genAutoKeyFromOffline(AutoKeyBSGSRNS &result, AutoKeyBSGSRNS &result1,
         std::pair<int32_t, std::vector<RlweCiphertext>>(index, temp2));
   }
 }
+} // namespace kspir

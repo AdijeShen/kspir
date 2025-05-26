@@ -5,11 +5,13 @@
 #include "crt.h"
 #include "params.h"
 #include "utils.h"
+#include <spdlog/spdlog.h>
 
 #ifdef INTEL_HEXL
 #include <hexl/hexl.hpp>
 #endif
 
+namespace kspir {
 void copy_vector(int64_t *result, uint64_t *a) {
   for (size_t i = 0; i < N; i++) {
     result[i] = a[i];
@@ -70,26 +72,6 @@ void showLargeIntervalVector(std::vector<uint64_t> &vals, int32_t interval,
     for (long i = interval; i < 16 * interval; i += interval)
       std::cout << ", " << vals[i];
     std::cout << ", ..., " << vals[vals.size() - interval];
-  }
-  std::cout << "]" << std::endl;
-}
-
-template <typename T> void showVector(std::vector<T> &vals, std::string ss) {
-  std::cout << ss;
-  std::cout << "[";
-  std::cout << vals[0];
-  for (long i = 1; i < vals.size(); ++i) {
-    std::cout << ", " << vals[i];
-  }
-  std::cout << "]" << std::endl;
-}
-
-void showVector(std::vector<uint64_t> &vals, std::string ss) {
-  std::cout << ss;
-  std::cout << "[";
-  std::cout << vals[0];
-  for (long i = 1; i < vals.size(); ++i) {
-    std::cout << ", " << vals[i];
   }
   std::cout << "]" << std::endl;
 }
@@ -1313,15 +1295,9 @@ void automorphic(std::vector<uint64_t> &result,
   // std::copy(data.begin(), data.end(), temp.begin());
 
   for (size_t i = 0; i < N; i++) {
-#if N == 2048
-    uint64_t destination = (i * index) & 0x0fff; // mod 2N
-#elif N == 256
-    uint64_t destination = (i * index) & 0x01ff; // mod 2N
-#elif N == 4096
-    uint64_t destination = (i * index) & 0x1fff; // mod 2N
-#else
-    uint64_t destination = (i * index) % (2 * length);
-#endif
+    constexpr uint64_t mask =
+        (CURRENT_PARAM_SET == ParamSet::SET_2048) ? 0x0fff : 0x1fff;
+    uint64_t destination = (i * index) & mask; // mod 2N
     if (destination >= N) {
       result[destination - N] = (modulus - input[i]) % modulus;
     } else {
@@ -1329,24 +1305,6 @@ void automorphic(std::vector<uint64_t> &result,
     }
   }
 }
-
-/*
-uint64_t modPowerofN(uint64_t input)
-{
-    uint64_t result;
-#if N == 2048
-        uint64_t result = input & 0x0fff; // mod 2N
-#elif N == 256
-        uint64_t result = input & 0x01ff; // mod 2N
-#elif N == 4096
-        uint64_t result = input & 0x1fff; // mod 2N
-#else
-        uint64_t result = input % (2 * N);
-#endif
-
-    return result;
-}
-*/
 
 void encode_crt(std::vector<uint64_t> &result) {
   // uint128_t temp = static_cast<uint128_t>(bigMod2) * mod2inv % bigMod;
@@ -1419,6 +1377,7 @@ void compute_hexl_rotate_indexes(std::vector<int32_t> &hexl_ntt_index,
   // the ntts.computeForward outputs w^hexl_ntt_index[0], w^hexl_ntt_index[1],
   // \cdots hexl_ntt_index = [1, 4097, 2049, 6145, 1025, 5121, 3073, \cdots]
   // std::vector<uint64_t> hexl_ntt_index(length, 0);
+  // hexl_ntt_index 等价于 (bit_reversal_index << 1 | 1)
   hexl_ntt_index[0] = 1;
   for (size_t i = 0; i < log2(length); i++) {
     int32_t current_fill = 0x01 << i;
@@ -1430,43 +1389,12 @@ void compute_hexl_rotate_indexes(std::vector<int32_t> &hexl_ntt_index,
     }
   }
 
-  // rotate_index = [1, 5, 25, 125, 625, \cdots, q-1, q-5, \cdots]
-  // std::vector<uint64_t> rotate_index(length, 0);
-  /**
-  int32_t half_length = length / 2;
-  rotate_index[0] = 1;
-  rotate_index[half_length] = (2 * length) - 1;
-  for (size_t i = 1; i < length/2; i++)
-  {
-      rotate_index[i] = rotate_index[i - 1] * 5 % (2 * length);
-      rotate_index[half_length + i] = rotate_index[half_length + i - 1] * 5 % (2
-  * length);
-  }
-  **/
-  // int32_t half_length = length / 2;
   rotate_index[0] = 1;
   rotate_index[length - 1] = (2 * length) - 1;
   for (size_t i = 1; i < length / 2; i++) {
     rotate_index[i] = rotate_index[i - 1] * 5 % (2 * length);
-    // rotate_index[half_length + i] = rotate_index[half_length + i - 1] * 5 %
-    // (2 * length);
     rotate_index[length - 1 - i] =
         rotate_index[length - 1 - i + 1] * 5 % (2 * length);
-  }
-}
-
-void compute_find_index(std::vector<int32_t> &hexl_ntt_index,
-                        std::vector<int32_t> &find_index,
-                        const int32_t length) {
-  // std::vector<int32_t> hexl_ntt_index(length, 0);
-  std::vector<int32_t> rotate_index(length, 0);
-  compute_hexl_rotate_indexes(hexl_ntt_index, rotate_index, length);
-
-  // [0, 1,  2, 3, 4, \cdots, 2048, \cdots]
-  // [1, 3,  5, 7, 9, \cdots, 4097, \cdots]
-  // [0, *,  *, *, *, \cdots,    1, \cdots]
-  for (size_t i = 0; i < length; i++) {
-    find_index[hexl_ntt_index[i] >> 0x01] = i;
   }
 }
 
@@ -1508,6 +1436,8 @@ void compute_permutation(std::vector<int32_t> &permutation, const int32_t index,
   std::vector<int32_t> hexl_ntt_index(length, 0);
   std::vector<int32_t> rotate_index(length, 0);
   compute_hexl_rotate_indexes(hexl_ntt_index, rotate_index, length);
+  SPDLOG_DEBUG("hexl_ntt_index: {}", fmt::join(hexl_ntt_index, ","));
+  SPDLOG_DEBUG("rotate_index: {}", fmt::join(rotate_index, ","));
 
   // [0, 1,  2, 3, 4, \cdots, 2048, \cdots]
   // [1, 3,  5, 7, 9, \cdots, 4097, \cdots]
@@ -1528,63 +1458,21 @@ void compute_permutation(std::vector<int32_t> &permutation, const int32_t index,
   }
 }
 
-/**
- * @brief compuate permutaion matrix for a max index
- *
- */
 void compute_permutation_matrix(std::vector<std::vector<int32_t>> &permutations,
-                                const int32_t max_index, const int32_t length) {
+                                const int32_t max_indexs,
+                                const int32_t length) {
   std::vector<int32_t> hexl_ntt_index(length, 0);
   std::vector<int32_t> rotate_index(length, 0);
   compute_hexl_rotate_indexes(hexl_ntt_index, rotate_index, length);
 
-  // [0, 1, 2, 3, 4, \cdots, 2048, \cdots]
-  // [1, 3, 5, 7, 9, \cdots, 4097, \cdots]
-  // [0, *, *, *, *, \cdots,    1, \cdots]
   std::vector<int32_t> find_index(length, 0);
   for (size_t i = 0; i < length; i++) {
     find_index[hexl_ntt_index[i] >> 0x01] = i;
   }
-
   // compute permutation matrix
   std::vector<int32_t> inter_permutation(length, 0);
-  for (size_t index = 0; index < max_index; index++) {
+  for (size_t index = 0; index < max_indexs; index++) {
     compute_inter_permutation(inter_permutation, rotate_index, index, length);
-
-    //  permutation = hexl_ntt_index \circ inter_permutation \circ find_index
-    for (size_t i = 0; i < length; i++) {
-      permutations[index][i] =
-          find_index[inter_permutation[hexl_ntt_index[i] >> 0x01] >> 0x01];
-    }
-  }
-}
-
-/**
- * @brief compuate interval permutaion matrix for a max index
- * return indexes: 0, N1, 2 * N1, 3 * N1, \cdots, (max_index - 1) * N1
- *
- */
-void compute_interval_permutation_matrix(
-    std::vector<std::vector<int32_t>> &permutations, const int32_t max_index,
-    const int32_t N1, const int32_t length) {
-  std::vector<int32_t> hexl_ntt_index(length, 0);
-  std::vector<int32_t> rotate_index(length, 0);
-  compute_hexl_rotate_indexes(hexl_ntt_index, rotate_index, length);
-
-  // [0, 1, 2, 3, 4, \cdots, 2048, \cdots]
-  // [1, 3, 5, 7, 9, \cdots, 4097, \cdots]
-  // [0, *, *, *, *, \cdots,    1, \cdots]
-  std::vector<int32_t> find_index(length, 0);
-  for (size_t i = 0; i < length; i++) {
-    find_index[hexl_ntt_index[i] >> 0x01] = i;
-  }
-
-  // compute permutation matrix
-  std::vector<int32_t> inter_permutation(length, 0);
-  for (size_t index = 0; index < max_index; index++) {
-    // compute permutation matrix for each index * N1
-    compute_inter_permutation(inter_permutation, rotate_index, index * N1,
-                              length);
 
     //  permutation = hexl_ntt_index \circ inter_permutation \circ find_index
     for (size_t i = 0; i < length; i++) {
@@ -1601,11 +1489,24 @@ void compute_query_encode(std::vector<int32_t> &query_encode,
   std::vector<int32_t> rotate_index(length, 0);
   compute_hexl_rotate_indexes(hexl_ntt_index, rotate_index, length);
 
+  int log2n = static_cast<int>(std::log2(length)) + 1;
+  // 打印每个数的二进制表示
+  SPDLOG_INFO("Binary representation ({}位):", log2n);
+  for (int i = 0; i < length; i++) {
+    std::string binary;
+    int val = hexl_ntt_index[i];
+    for (int j = log2n - 1; j >= 0; j--) {
+      binary += ((val >> j) & 1) ? '1' : '0';
+    }
+    SPDLOG_INFO("[{}] = {}", i, binary);
+  }
+  // find_index是bit_reverse的index
   std::vector<int32_t> find_index(length, 0);
   for (size_t i = 0; i < length; i++) {
     find_index[hexl_ntt_index[i] >> 0x01] = i;
   }
 
+  // query_encode是rotate_index的bit_reverse
   // std::vector<int32_t> query_encode(length, 0); // find encode positon
   for (size_t i = 0; i < length; i++) {
     query_encode[i] = find_index[rotate_index[i] / 2];
@@ -1620,3 +1521,4 @@ void compute_query_decode(std::vector<int32_t> &query_decode,
     query_decode[query_encode[i]] = i;
   }
 }
+} // namespace kspir

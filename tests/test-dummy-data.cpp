@@ -35,20 +35,7 @@ void test_dummy_data() {
   // keySwitch key (null value)
   std::vector<std::vector<uint64_t>> ks(2 * N * ell,
                                         std::vector<uint64_t>(N, 0));
-  /*std::vector<RlweCiphertext> ks(N * ell);
-  for (size_t i = 0; i < N * ell; i++)
-  {
-      sample_random62_vector(ks[i].getA().data(), ks[i].getLength());
-      sample_random62_vector(ks[i].getA().data(), ks[i].getLength());
-  }
-  */
-  /*
-  for (size_t i = 0; i < 2 * N * ell; i++)
-  {
-      // sample_random62_vector(ks[i].data(), ks[i].size());
-      sample_random(ks[i], bigMod);
-  }
-  */
+
   start = std::chrono::high_resolution_clock::now();
 
   int32_t ntimes = 1;

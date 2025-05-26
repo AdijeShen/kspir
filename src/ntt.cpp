@@ -3,14 +3,13 @@
 
 #include "ntt.h"
 
-#define MONT -4186625 // 2^32 % Q
 #define QINV 58728449 // q^(-1) mod 2^32
 #define Q mod         // dilithium
 
-#define bigMOUT 103075020800       // 2^64 % bigQ
-#define bigQINV 148629233667694593 // bigQ^(-1) mod 2^64
-#define bigQ bigMod                // 4398046486529
+#define bigQINV 70936092446048257 // bigQ^(-1) mod 2^64
+#define bigQ bigMod                // 1125899906826241
 
+namespace kspir {
 int32_t montgomery_reduce(int64_t a) {
   int32_t t;
 
@@ -30,21 +29,9 @@ int64_t montgomery_reduce(__int128_t a) {
 int64_t barret_reduce(int64_t a) {
   int64_t t;
 
-  // v = round(2^(40+64) /bigQ.);
-  // const int64_t v = 4611686044196143104;
-  const int64_t v = 4611686044196143248;
-  t = (__int128_t)v * a >> 104;
-
-  t *= bigQ;
-  return a - t;
-}
-
-int64_t barret_mult_reduce(__uint128_t a) {
-  int64_t t;
-
-  // v = round(2^(40+64) /bigQ.);s
-  const int64_t v = 4611686044196143248;
-  t = (__int128_t)v * a >> 104;
+  // v = round(2^(2*50) /bigQ.);
+  const int64_t v = 1125899906859007;
+  t = (__int128_t)v * a >> 100;
 
   t *= bigQ;
   return a - t;
@@ -96,11 +83,7 @@ void ntt(int64_t a[dim]) {
 void invntt_tomont(int32_t a[dim]) {
   unsigned int start, len, j, k;
   int32_t t, zeta;
-#ifndef SECURITY
-  const int32_t f = 41978; // mont^2/256
-#else
   const int32_t f = 6290560;     // mont^2/2048
-#endif
 
   k = dim;
   for (len = 1; len < dim; len <<= 1) {
@@ -123,13 +106,8 @@ void invntt_tomont(int32_t a[dim]) {
 void invntt_tomont(int64_t a[dim]) {
   unsigned int start, len, j, k;
   int64_t t, zeta;
-#ifndef SECURITY
-  const int64_t f = 300619399936; // mont^2/256
-#else
   const int64_t f = 37577424992; // mont^2/2048
-#endif
 
-  // k = 256;
   k = dim;
   for (len = 1; len < dim; len <<= 1) {
     for (start = 0; start < dim; start = j + len) {
@@ -190,3 +168,4 @@ void subtraction(uint64_t result[dim], uint64_t a[dim], uint64_t b[dim],
     result[i] = sub < 0 ? sub += modulus : sub;
   }
 }
+} // namespace kspir

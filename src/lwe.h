@@ -1,5 +1,4 @@
-#ifndef LWE_CIPHERTEXT_H
-#define LWE_CIPHERTEXT_H
+#pragma once
 
 #include <map>
 #include <stdint.h>
@@ -13,6 +12,7 @@
 #include <hexl/hexl.hpp>
 #endif
 
+namespace kspir {
 class LweCiphertext {
 private:
   /* data */
@@ -463,4 +463,4 @@ public:
   // ~RlweCiphertext();
 };
 
-#endif
+} // namespace kspir

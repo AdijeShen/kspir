@@ -22,6 +22,7 @@
 // #define DATA_INDEPENDENT_HANDLE
 // #define MISSING_ADD
 
+namespace kspir {
 void decompose_a(uint64_t **dec_a, uint64_t *a) {
   /*
   dec_a = new uint64_t*[N];
@@ -101,49 +102,6 @@ int ksKey_hint(std::vector<uint64_t> &b_rlwe, std::vector<uint64_t> &a_rlwe,
                                  dec_a[k][j], a_rlwe.data(), N, bigMod, 1);
     }
   }
-
-  return 0;
-}
-
-// use mult mod instead of fma mod
-int ksKey_hint_variant(std::vector<uint64_t> &b_rlwe,
-                       std::vector<uint64_t> &a_rlwe, std::vector<uint64_t> &a,
-                       std::vector<std::vector<uint64_t>> &ks) {
-  lweToRlwe(a);
-  std::vector<std::vector<uint64_t>> dec_a(ell, std::vector<uint64_t>(N, 0));
-  decompose(dec_a, a, ell, 0x01 << 17, Bg);
-
-  // std::vector<std::vector<uint64_t> > dec_a(ell * N,
-  // std::vector<uint64_t>(N)); decompose_variant(dec_a, a, ell, 0x01 << 17,
-  // Bg);
-
-  std::vector<uint64_t> temp_a(N);
-  std::vector<uint64_t> temp_b(N);
-  std::vector<uint64_t> temp_dec(N);
-
-  for (size_t j = 0; j < N; j++) {
-    for (size_t k = 0; k < ell; k++) {
-      int index = 2 * ell * j + 2 * k;
-
-      element_to_vector(temp_dec, dec_a[k][j]);
-      intel::hexl::EltwiseMultMod(temp_b.data(), ks[index].data(),
-                                  temp_dec.data(), N, bigMod, 1);
-      intel::hexl::EltwiseMultMod(temp_a.data(), ks[index + 1].data(),
-                                  temp_dec.data(), N, bigMod, 1);
-      for (size_t p = 0; p < N; p++) {
-        b_rlwe[p] += temp_b[p];
-        a_rlwe[p] += temp_a[p];
-      }
-      // intel::hexl::EltwiseAddMod(b_rlwe.data(), b_rlwe.data(), temp_b.data(),
-      // N, bigMod); intel::hexl::EltwiseAddMod(a_rlwe.data(), a_rlwe.data(),
-      // temp_a.data(), N, bigMod);
-    }
-  }
-
-  intel::hexl::EltwiseReduceMod(b_rlwe.data(), b_rlwe.data(), N, bigMod, bigMod,
-                                1);
-  intel::hexl::EltwiseReduceMod(a_rlwe.data(), a_rlwe.data(), N, bigMod, bigMod,
-                                1);
 
   return 0;
 }
@@ -407,48 +365,6 @@ int answer_two_dimensions(RlweCiphertext &result, std::vector<uint64_t> &b_rlwe,
 }
 #endif
 
-#ifdef INTEL_HEXL
-int answer_packing(std::vector<uint64_t> &b_rlwe, std::vector<uint64_t> &a_rlwe,
-                   std::vector<uint64_t> &b, std::vector<uint64_t> &a,
-                   std::vector<std::vector<uint64_t>> &data,
-                   std::vector<std::vector<uint64_t>> &ks, bool isntt_b,
-                   bool isntt_data) {
-  if (!isntt_b | !isntt_data) {
-    std::cout << "Error: b or data should be ntt form." << std::endl;
-    return 0;
-  }
-
-  uint64_t f = 114521;               // 1/n
-  uint64_t *b_vec = new uint64_t[N]; // store pvw lwe, part b
-
-  std::vector<uint64_t> t_i(N);
-
-  for (size_t i = 0; i < N; i++) {
-
-    // auto start = std::chrono::high_resolution_clock::now();
-    uint64_t temp = 0;
-    intel::hexl::EltwiseMultMod(t_i.data(), b.data(), data[i].data(), b.size(),
-                                bigMod, 1);
-#ifndef MISSING_ADD
-    for (size_t j = 0; j < N; j++) {
-      temp += t_i[j];
-    }
-    b_vec[i] = barret_reduce((__int128_t)temp * f);
-#endif
-  }
-
-  //
-  for (size_t i = 0; i < N; i++) {
-    // TODO: mod subtraction
-    b_rlwe[i] -= b_vec[i];
-  }
-
-  delete[] b_vec;
-
-  return 1;
-}
-#endif
-
 /**
  * @brief
  *
@@ -575,15 +491,9 @@ void evalAuto(RlweCiphertext &result, const int32_t index,
 
   // (temp_a, temp_b) = automorphic^()(a, b)
   for (size_t i = 0; i < length; i++) {
-#if N == 2048
-    uint64_t destination = (i * index) & 0x0fff; // mod 2N
-#elif N == 256
-    uint64_t destination = (i * index) & 0x01ff; // mod 2N
-#elif N == 4096
-    uint64_t destination = (i * index) & 0x1fff; // mod 2N
-#else
-    uint64_t destination = (i * index) % (2 * length);
-#endif
+    constexpr uint64_t mask =
+        (CURRENT_PARAM_SET == ParamSet::SET_2048) ? 0x0fff : 0x1fff;
+    uint64_t destination = (i * index) & mask; // mod 2N
     if (destination >= length) {
       temp_a[destination - length] = modulus - result.a[i];
       temp_b[destination - length] = modulus - result.b[i];
@@ -848,15 +758,9 @@ void evalAutoRNS(RlweCiphertext &result1, RlweCiphertext &result2,
 
   // (temp_a, temp_b) = automorphic^()(a, b)
   for (size_t i = 0; i < length; i++) {
-#if N == 2048
-    uint64_t destination = (i * index) & 0x0fff; // mod 2N
-#elif N == 256
-    uint64_t destination = (i * index) & 0x01ff; // mod 2N
-#elif N == 4096
-    uint64_t destination = (i * index) & 0x1fff; // mod 2N
-#else
-    uint64_t destination = (i * index) % (2 * length);
-#endif
+    constexpr uint64_t mask =
+        (CURRENT_PARAM_SET == ParamSet::SET_2048) ? 0x0fff : 0x1fff;
+    uint64_t destination = (i * index) & mask; // mod 2N
     if (destination >= length) {
       temp_a1[destination - length] = modulus1 - result1.a[i];
       temp_b1[destination - length] = modulus1 - result1.b[i];
@@ -1011,50 +915,6 @@ void evalExpandRNS(std::vector<RlweCiphertext> &result,
       result[i + N].b[j] =
           static_cast<uint128_t>(result[i + N].b[j]) * bNinv2 % bigMod2;
     }
-  }
-}
-
-// TODO: check or remove it
-/**
- * @brief evaluate trace function, rns variant
- *
- * @param result
- * @param logNn
- * @param autokey
- */
-void evalTrNnRNS(std::vector<RlweCiphertext> &result, int32_t log2Nn,
-                 const AutoKeyRNS &autokey) {
-  uint64_t length = result[0].getLength();
-  uint64_t modulus1 = result[0].getModulus();
-  uint64_t modulus2 = result[1].getModulus();
-
-  std::vector<uint64_t> temp_a1(length);
-  std::vector<uint64_t> temp_b1(length);
-
-  std::vector<uint64_t> temp_a2(length);
-  std::vector<uint64_t> temp_b2(length);
-
-  for (size_t k = 1; k <= log2Nn; k++) {
-    int32_t index = (length >> k << 1) + 1;
-    copy(result[0].a.begin(), result[0].a.end(), temp_a1.begin());
-    copy(result[0].b.begin(), result[0].b.end(), temp_b1.begin());
-    copy(result[1].a.begin(), result[1].a.end(), temp_a2.begin());
-    copy(result[1].b.begin(), result[1].b.end(), temp_b2.begin());
-
-    evalAutoRNS(result[0], result[1], index, autokey);
-
-#ifdef INTEL_HEXL
-    intel::hexl::EltwiseAddMod(result[0].a.data(), result[0].a.data(),
-                               temp_a1.data(), length, modulus1);
-    intel::hexl::EltwiseAddMod(result[0].b.data(), result[0].b.data(),
-                               temp_b1.data(), length, modulus1);
-
-    intel::hexl::EltwiseAddMod(result[1].a.data(), result[1].a.data(),
-                               temp_a2.data(), length, modulus2);
-    intel::hexl::EltwiseAddMod(result[1].b.data(), result[1].b.data(),
-                               temp_b2.data(), length, modulus2);
-
-#endif
   }
 }
 
@@ -1237,13 +1097,13 @@ void evalKsKeyGenForThreads(std::vector<std::vector<uint64_t>> &ks,
 void evalKsKeyGen(std::vector<std::vector<uint64_t>> &ks,
                   std::vector<std::vector<uint64_t>> &pk,
                   std::vector<std::vector<uint64_t>> &data) {
-#ifndef THREADS
+#ifndef KSPIR_THREADS
   for (size_t i = 0; i < N; i++) {
     evalSingleKsKeyGen(ks, pk, data, i);
   }
 #endif
 
-#ifdef THREADS
+#ifdef KSPIR_THREADS
 
   size_t threads_num = THREADS_NUM; // 8, 16, 32, power of two
   std::thread threads[threads_num];
@@ -1348,3 +1208,4 @@ void modSwitch(RlweCiphertext &result, RlweCiphertext &input1,
   result.setIsNtt(true);
 #endif
 }
+} // namespace kspir

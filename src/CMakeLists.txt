@@ -8,4 +8,4 @@ include_directories(PUBLIC "/usr/local/include")
 add_library(pir STATIC ${SRCS})
 
 target_include_directories(pir PUBLIC "/usr/local/include")
-target_link_libraries(pir HEXL::hexl)
+target_link_libraries(pir HEXL::hexl spdlog)

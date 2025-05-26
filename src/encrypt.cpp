@@ -8,6 +8,7 @@
 #include "samples.h"
 #include "utils.h"
 
+namespace kspir {
 void native_mult(uint64_t *b, uint64_t *a, Secret &secret);
 
 // encrypt an LWE cipertext
@@ -603,3 +604,4 @@ void native_mult(uint64_t *b, uint64_t *a, Secret &secret) {
     }
   }
 }
+} // namespace kspir

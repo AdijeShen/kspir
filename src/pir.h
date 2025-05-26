@@ -1,6 +1,4 @@
-#ifndef PIR_H
-#define PIR_H
-
+#pragma once    
 #include "answer.h"
 #include "encrypt.h"
 #include "lwe.h"
@@ -16,4 +14,4 @@
 
 #include "crt.h"
 
-#endif
+using namespace kspir;

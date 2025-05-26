@@ -48,7 +48,7 @@ void test_two_dimensions() {
   for (size_t i = 0; i < ntimes; i++) {
     ksKey_hint(kskHint.b, kskHint.a, query1.a, ks);
   }
-  // ksKey_hint_variant(kskHint.b, kskHint.a, query1.a, ks);
+
   auto stop_ksk = std::chrono::high_resolution_clock::now();
   auto glapsed_ksk = std::chrono::duration_cast<std::chrono::microseconds>(
       stop_ksk - start_ksk);

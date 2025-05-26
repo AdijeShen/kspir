@@ -4,6 +4,7 @@
 #include "params.h"
 #include "samples.h"
 
+namespace kspir {
 void query(RlweCiphertext &cipher, Secret &queryKey, uint64_t row) {
   uint64_t length = queryKey.getLength();
 
@@ -29,27 +30,4 @@ void query(RlweCiphertext &cipher, Secret &queryKey, uint64_t row) {
 
   // delete[] message;
 }
-
-// the keyswitch key has size of [2N][N]
-void build_keyswitch_key(uint64_t **ks, Secret &secret,
-                         std::vector<Secret> &encrypted_keys) {
-  uint64_t modulus = secret.getModulus();
-
-  for (size_t i = 0; i < 2 * ell * N; i += 2) {
-    sample_random(ks[i], modulus, N);
-  }
-
-  uint64_t *message = new uint64_t[N];
-
-  for (size_t i = 0; i < N; i++) {
-    for (size_t j = 0; j < ell; j++) {
-      for (size_t k = 0; k < N; k++) {
-        message[k] = 256 * j * encrypted_keys[i].getData(k);
-      }
-      int index = 2 * ell * i + 2 * j;
-      encrypt(ks[index + 1], ks[index], secret, message);
-    }
-  }
-
-  delete[] message;
-}
+} // namespace kspir
