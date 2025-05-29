@@ -1491,14 +1491,14 @@ void compute_query_encode(std::vector<int32_t> &query_encode,
 
   int log2n = static_cast<int>(std::log2(length)) + 1;
   // 打印每个数的二进制表示
-  SPDLOG_INFO("Binary representation ({}位):", log2n);
+  // SPDLOG_INFO("Binary representation ({}位):", log2n);
   for (int i = 0; i < length; i++) {
     std::string binary;
     int val = hexl_ntt_index[i];
     for (int j = log2n - 1; j >= 0; j--) {
       binary += ((val >> j) & 1) ? '1' : '0';
     }
-    SPDLOG_INFO("[{}] = {}", i, binary);
+    // SPDLOG_INFO("[{}] = {}", i, binary);
   }
   // find_index是bit_reverse的index
   std::vector<int32_t> find_index(length, 0);

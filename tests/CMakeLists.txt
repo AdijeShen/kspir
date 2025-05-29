@@ -51,3 +51,7 @@ target_link_libraries(test-first-dimension    pir HEXL::hexl)
 add_executable(test-ntt-index ${PROJECT_SOURCE_DIR}/tests/test_ntt_index.cpp)
 target_include_directories(test-ntt-index PUBLIC ${PROJECT_SOURCE_DIR}/src)
 target_link_libraries(test-ntt-index pir HEXL::hexl GTest::gtest_main)
+
+add_executable(test-bsgs-matrix-mul ${PROJECT_SOURCE_DIR}/tests/test-bsgs-matrix-mul.cpp)
+target_include_directories(test-bsgs-matrix-mul PUBLIC ${PROJECT_SOURCE_DIR}/src)
+target_link_libraries(test-bsgs-matrix-mul pir HEXL::hexl CLI11::CLI11 GTest::gtest_main)

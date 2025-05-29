@@ -65,3 +65,17 @@ set(INSTALL_GTEST OFF CACHE BOOL "")
 set(BUILD_GMOCK OFF CACHE BOOL "")
 
 FetchContent_MakeAvailable(googletest)
+
+# CLI11 - Modern command line parser for C++11 and beyond
+CustomFetch(
+    CLI11
+    GIT_REPOSITORY https://github.com/CLIUtils/CLI11.git
+    GIT_TAG v2.4.1
+)
+
+# Configure CLI11 build options
+set(CLI11_BUILD_TESTS OFF CACHE BOOL "")
+set(CLI11_BUILD_EXAMPLES OFF CACHE BOOL "")
+set(CLI11_BUILD_DOCS OFF CACHE BOOL "")
+
+FetchContent_MakeAvailable(CLI11)

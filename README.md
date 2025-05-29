@@ -25,30 +25,6 @@ We recommend that install it to your default user's program path `/usr/local`, a
 | HEXL  | v1.2.5 | https://github.com/intel/hexl |
 
 
-We recommend using the following command to install HEXL. You can also refer to the website for more detailed information.
-
-```
-git clone https://github.com/intel/hexl.git -b v1.2.5 --single-branch 
-cd hexl
-mkdir build
-cd build
-cmake ..
-make
-sudo make install
-```
-
-After install [Intel HEXL](https://github.com/intel/hexl), you can build and run our PIR protocol by
-
-```
-cd kspir
-mkdir build
-cd build
-cmake ..
-make
-./tests/test-pir
-```
-
-
 An example output:
 ```
 Packing number: 16

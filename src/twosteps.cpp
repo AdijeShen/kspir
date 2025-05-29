@@ -76,24 +76,7 @@ void database_tobsgsntt(std::vector<std::vector<uint64_t>> &result,
   // rotate 1 ~ N/2
   std::vector<uint64_t> temp1(length, 0);
   std::vector<uint64_t> temp2(length, 0);
-  /**
-  for (size_t i = 0; i < N / 2; i++)
-  {
-      // query permutation for data_ntt
-      // copy data_ntt[i] to temp
-      copy(result[i].begin(), result[i].end(), temp1.begin());
-      // encode data_ntt[i]
-      for (size_t j = 0; j < N; j++)
-      {
-          temp2[query_encode[j]] = temp1[j];
-      }
 
-      for (size_t j = 0; j < N; j++)
-      {
-          result[i][j] =  temp2[permutations[i][j]]; // i is rotation number
-      }
-  }
-  **/
   int32_t N2 = N / 2 / N1;
   for (size_t k = 0; k < N2; k++) {
     for (size_t i = 0; i < N1; i++) {
@@ -112,30 +95,6 @@ void database_tobsgsntt(std::vector<std::vector<uint64_t>> &result,
     }
   }
 
-/** if hexl_ntt_index = [5, 25, 125, \cdots]
-    for (size_t i = 0; i < N / 2; i++)
-    {
-        for (size_t j = 0; j < N / 2; j++)
-        {
-            // cycle diagonal line
-            // result[i][j] = data[j][(i + j) % (N/2)];
-            int32_t col = (i + j) & (N/2 - 1);
-            result[i][j] = data[j][col];
-
-            result[i][N - 1 - j] = data[N - 1 - j][col];
-        }
-        // for i = 1, result = [a, b, c, d, e, f, g, h]
-        // data = [ 0, a, 0, 0]
-        //        [ 0, 0, b, 0]
-        //        [ 0, 0, 0, c]
-        //        [ d, 0, 0, 0]
-        //        -------------
-        //        [ e, 0, 0, 0]
-        //        [ 0, 0, 0, f]
-        //        [ 0, 0, g, 0]
-        //        [ 0, h, 0, 0]
-    }
-**/
 #ifdef INTEL_HEXL
   // encode
   intel::hexl::NTT nttp(N, bsgsp);
