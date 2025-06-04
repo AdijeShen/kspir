@@ -340,14 +340,15 @@ void generateTestData(uint64_t*& database,
     for (size_t i = 0; i < config.N; i++) {
         original_database[i].resize(config.N / 2);
         for (size_t j = 0; j < config.N / 2; j++) {
-            if (j == target_col) {
-                // 在目标列设置已知的测试值：行号 + 1000
-                // 这样我们知道期望的结果应该是什么
-                original_database[i][j] = i + 1000;
-            } else {
-                // 其他位置使用小的随机值，避免干扰
-                original_database[i][j] = gen() % 100;
-            }
+            // if (j == target_col) {
+            //     // 在目标列设置已知的测试值：行号 + 1000
+            //     // 这样我们知道期望的结果应该是什么
+            //     original_database[i][j] = i + 1000;
+            // } else {
+            //     // 其他位置使用小的随机值，避免干扰
+            //     original_database[i][j] = gen() % 100;
+            // }
+            original_database[i][j] = rand() % 1000;
         }
     }
     
@@ -510,7 +511,7 @@ TEST_F(BSGSMatrixMulTest, CorrectnessTest) {
     EXPECT_TRUE(correctness_passed) << "BSGS算法正确性验证失败！解密结果与明文矩阵乘法结果不匹配";
     
     if (correctness_passed) {
-        SPDLOG_INFO("🎉 正确性验证通过！BSGS算法结果与明文矩阵乘法结果匹配");
+        SPDLOG_INFO("\033[32m🎉 正确性验证通过！BSGS算法结果与明文矩阵乘法结果匹配\033[0m");
     } else {
         SPDLOG_ERROR("❌ 正确性验证失败！BSGS算法结果与明文矩阵乘法结果不匹配");
     }

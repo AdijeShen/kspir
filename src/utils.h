@@ -307,6 +307,10 @@ void compute_permutation_matrix(std::vector<std::vector<int32_t>> &permutations,
 /**
  * 计算查询编码
  * 用于PIR查询的特殊编码
+ * @param query_encode 输出参数,存储计算得到的查询编码
+ * @param length 向量长度,决定置换矩阵的列数
+ * @note 得到shift_index[i] = i^5 mod 2N
+ * @note 然后计算query_encode[i]是shift_index[i]的bit_reversal_index
  */
 void compute_query_encode(std::vector<int32_t> &query_encode,
                           const int32_t length = N);
@@ -314,6 +318,7 @@ void compute_query_encode(std::vector<int32_t> &query_encode,
 /**
  * 计算查询解码
  * 用于反转查询编码操作
+ * compute_query_encode的逆操作
  */
 void compute_query_decode(std::vector<int32_t> &query_decode,
                           const int32_t length = N);
